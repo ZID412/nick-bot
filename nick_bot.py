@@ -99,6 +99,18 @@ def build_client() -> TelegramClient:
     return TelegramClient("my_account", API_ID, API_HASH, **kwargs)
 
 
+def day_or_night_emoji(emoji: str) -> str:
+    """晚上（19:00-06:00）晴天类换成月亮"""
+    hour = datetime.now(TZ).hour
+    if hour >= 6 and hour < 19:
+        return emoji
+    return {
+        "☀️": "🌙",
+        "🌤️": "🌜",
+        "⛅": "🌛",
+    }.get(emoji, emoji)
+
+
 async def main():
     client = build_client()
     await client.start(phone=PHONE)
@@ -139,7 +151,8 @@ async def main():
             except Exception as e:
                 print(f"[天气拉取失败，沿用缓存] {e}")
 
-        nick = f"{prefix} {time_str} {emoji}{stylize(str(temp))}°"
+        nick_emoji = day_or_night_emoji(emoji)
+        nick = f"{prefix} {time_str} {nick_emoji}{stylize(str(temp))}°"
         try:
             await client(UpdateProfileRequest(first_name=nick))
             print(f"[更新] {nick}")
