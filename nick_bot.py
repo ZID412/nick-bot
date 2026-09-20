@@ -148,8 +148,6 @@ async def main():
             await asyncio.sleep(e.seconds)
         except Exception as e:
             print(f"[更新失败] {e}")
-            # 对齐到下一个 30 秒边界再睡
-        await asyncio.sleep(30 - (time.time() % 30))
 
         # 对齐到下一个 30 秒边界再睡
         await asyncio.sleep(30 - (time.time() % 30))
