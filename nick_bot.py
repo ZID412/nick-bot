@@ -126,7 +126,9 @@ async def main():
 
     while True:
         now = datetime.now(TZ)
-        time_str = stylize(now.strftime("%H:%M:%S"))
+        # 秒数对齐到 30 秒边界：只显示 :00 或 :30
+        aligned = now.replace(second=(0 if now.second < 30 else 30), microsecond=0)
+        time_str = stylize(aligned.strftime("%H:%M:%S"))
 
         # 每 2 小时刷新天气（失败则沿用缓存）
         if time.time() - last_weather > WEATHER_REFRESH_SECONDS:
@@ -146,9 +148,11 @@ async def main():
             await asyncio.sleep(e.seconds)
         except Exception as e:
             print(f"[更新失败] {e}")
-            await asyncio.sleep(REFRESH_SECONDS)
+            # 对齐到下一个 30 秒边界再睡
+        await asyncio.sleep(30 - (time.time() % 30))
 
-        await asyncio.sleep(REFRESH_SECONDS)
+        # 对齐到下一个 30 秒边界再睡
+        await asyncio.sleep(30 - (time.time() % 30))
 
 
 if __name__ == "__main__":
