@@ -1,0 +1,15 @@
+# 敏感文件（绝不推送）
+.env
+my_account.session
+my_account.session-journal
+code_hash.txt
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+
+# 临时登录脚本（部署不需要）
+login_send.py
+login_complete.py
+export_session.py
