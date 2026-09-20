@@ -1,4 +1,4 @@
-"""
+﻿"""
 Telegram 昵称实时时间 + 天气 userbot
 
 昵称格式: ZIDDDD. 13:00:00 ☀️30℃  （字母自动转粗斜体、数字自动转粗体无衬线）
@@ -137,7 +137,7 @@ async def main():
             except Exception as e:
                 print(f"[天气拉取失败，沿用缓存] {e}")
 
-        nick = f"{prefix} {time_str} {emoji}{stylize(str(temp))}°𝐶"
+        nick = f"{prefix} {time_str} {emoji}{stylize(str(temp))}°"
         try:
             await client(UpdateProfileRequest(first_name=nick))
             print(f"[更新] {nick}")
