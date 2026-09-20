@@ -154,6 +154,10 @@ async def main():
         nick_emoji = day_or_night_emoji(emoji)
         nick = f"{prefix} {time_str} {nick_emoji}{stylize(str(temp))}°"
         try:
+            if not client.is_connected():
+                print("[重连] 连接断开，正在重连...")
+                await client.connect()
+                await asyncio.sleep(2)
             await client(UpdateProfileRequest(first_name=nick))
             print(f"[更新] {nick}")
         except FloodWaitError as e:
@@ -161,6 +165,12 @@ async def main():
             await asyncio.sleep(e.seconds)
         except Exception as e:
             print(f"[更新失败] {e}")
+            try:
+                await client.disconnect()
+                await asyncio.sleep(5)
+                await client.connect()
+            except Exception:
+                pass
 
         # 对齐到下一个 30 秒边界再睡
         await asyncio.sleep(30 - (time.time() % 30))
