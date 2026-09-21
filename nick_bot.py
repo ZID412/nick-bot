@@ -158,7 +158,7 @@ async def main():
                 print("[重连] 连接断开，正在重连...")
                 await client.connect()
                 await asyncio.sleep(2)
-            await client(UpdateProfileRequest(first_name=nick))
+            await client(UpdateProfileRequest(last_name=nick))
             await client(UpdateStatusRequest(offline=True))
             print(f"[更新] {nick}")
         except FloodWaitError as e:
