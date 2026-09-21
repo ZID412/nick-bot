@@ -106,8 +106,8 @@ def day_or_night_emoji(emoji: str) -> str:
         return emoji
     return {
         "☀️": "🌙",
-        "🌤️": "🌜",
-        "⛅": "🌛",
+        "🌤️": "🌙",
+        "⛅": "🌙",
     }.get(emoji, emoji)
 
 
