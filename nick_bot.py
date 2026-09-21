@@ -17,7 +17,7 @@ import aiohttp
 from dotenv import load_dotenv
 from telethon import TelegramClient
 from telethon.errors import FloodWaitError
-from telethon.tl.functions.account import UpdateProfileRequest
+from telethon.tl.functions.account import UpdateProfileRequest, UpdateStatusRequest
 
 load_dotenv()
 
@@ -159,6 +159,7 @@ async def main():
                 await client.connect()
                 await asyncio.sleep(2)
             await client(UpdateProfileRequest(first_name=nick))
+            await client(UpdateStatusRequest(offline=True))
             print(f"[更新] {nick}")
         except FloodWaitError as e:
             print(f"[Telegram 限流] 等待 {e.seconds} 秒")
