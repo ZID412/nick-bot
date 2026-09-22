@@ -138,9 +138,9 @@ async def main():
 
     while True:
         now = datetime.now(TZ)
-        # 秒数对齐到 30 秒边界：只显示 :00 或 :30
-        aligned = now.replace(second=(0 if now.second < 30 else 30), microsecond=0)
-        time_str = stylize(aligned.strftime("%H:%M:%S"))
+        # 对齐到分钟边界，只显示 HH:MM
+        aligned = now.replace(second=0, microsecond=0)
+        time_str = stylize(aligned.strftime("%H:%M"))
 
         # 每 2 小时刷新天气（失败则沿用缓存）
         if time.time() - last_weather > WEATHER_REFRESH_SECONDS:
@@ -173,8 +173,8 @@ async def main():
             except Exception:
                 pass
 
-        # 对齐到下一个 30 秒边界再睡
-        await asyncio.sleep(30 - (time.time() % 30))
+        # 对齐到下一个分钟边界再睡
+        await asyncio.sleep(60 - (time.time() % 60))
 
 
 if __name__ == "__main__":
