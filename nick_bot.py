@@ -161,7 +161,7 @@ async def main():
                 print(f"[天气拉取失败，沿用缓存] {e}")
 
         nick_emoji = day_or_night_emoji(emoji)
-        nick = f"{time_str} {nick_emoji}{stylize_bold_digit(str(temp))}°𝐂"
+        nick = f"{time_str} {nick_emoji}{stylize(str(temp))}°"
         try:
             if not client.is_connected():
                 print("[重连] 连接断开，正在重连...")
