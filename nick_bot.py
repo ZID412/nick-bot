@@ -40,6 +40,8 @@ BOLD_UPPER = {chr(ord("A") + i): chr(0x1D400 + i) for i in range(26)}
 BOLD_LOWER = {chr(ord("a") + i): chr(0x1D41A + i) for i in range(26)}
 # 双线空心数字: 𝟘 = U+1D7D8
 DOUBLE_STRUCK_DIGIT = {str(i): chr(0x1D7D8 + i) for i in range(10)}
+# 粗体数字: 𝟎 = U+1D7CE
+BOLD_DIGIT = {str(i): chr(0x1D7CE + i) for i in range(10)}
 
 
 def stylize(text: str) -> str:
@@ -51,6 +53,13 @@ def stylize(text: str) -> str:
             or DOUBLE_STRUCK_DIGIT.get(ch)
             or ch
         )
+    return "".join(out)
+
+
+def stylize_bold_digit(text: str) -> str:
+    out = []
+    for ch in text:
+        out.append(BOLD_DIGIT.get(ch) or ch)
     return "".join(out)
 
 
@@ -152,7 +161,7 @@ async def main():
                 print(f"[天气拉取失败，沿用缓存] {e}")
 
         nick_emoji = day_or_night_emoji(emoji)
-        nick = f"{time_str} {nick_emoji}{stylize(str(temp))}°𝐂"
+        nick = f"{time_str} {nick_emoji}{stylize_bold_digit(str(temp))}°𝐂"
         try:
             if not client.is_connected():
                 print("[重连] 连接断开，正在重连...")
