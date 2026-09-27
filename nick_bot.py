@@ -33,6 +33,7 @@ LON = float(os.environ.get("LON", "113.58"))
 TZ = ZoneInfo(os.environ.get("TIMEZONE", "Asia/Shanghai"))
 PROXY_URL = os.environ.get("PROXY", "").strip()
 QWEATHER_KEY = os.environ.get("QWEATHER_KEY", "").strip()
+QWEATHER_HOST = os.environ.get("QWEATHER_HOST", "devapi.qweather.com").strip()
 
 # ---------- 特殊字体映射 ----------
 # 粗体大写字母（不斜体）: 𝐀 = U+1D400
@@ -94,7 +95,7 @@ WEATHER_EMOJI = {
 
 
 async def fetch_weather():
-    url = "https://devapi.qweather.com/v7/weather/now"
+    url = f"https://{QWEATHER_HOST}/v7/weather/now"
     params = {
         "location": f"{LON},{LAT}",
         "key": QWEATHER_KEY,
