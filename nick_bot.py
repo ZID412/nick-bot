@@ -32,6 +32,7 @@ LAT = float(os.environ.get("LAT", "22.27"))    # 珠海
 LON = float(os.environ.get("LON", "113.58"))
 TZ = ZoneInfo(os.environ.get("TIMEZONE", "Asia/Shanghai"))
 PROXY_URL = os.environ.get("PROXY", "").strip()
+QWEATHER_KEY = os.environ.get("QWEATHER_KEY", "").strip()
 
 # ---------- 特殊字体映射 ----------
 # 粗体大写字母（不斜体）: 𝐀 = U+1D400
@@ -63,34 +64,49 @@ def stylize_bold_digit(text: str) -> str:
     return "".join(out)
 
 
-# ---------- 天气（Open-Meteo，免费无需 key） ----------
+# ---------- 天气（和风天气 QWeather，免费 key） ----------
+# icon 代码 → 表情；夜间晴类 icon 直接给月亮
 WEATHER_EMOJI = {
-    0: "☀️", 1: "🌤️", 2: "⛅", 3: "☁️",
-    45: "🌫️", 48: "🌫️",
-    51: "🌦️", 53: "🌦️", 55: "🌦️", 56: "🌧️", 57: "🌧️",
-    61: "🌧️", 63: "🌧️", 65: "🌧️", 66: "🌧️", 67: "🌧️",
-    71: "🌨️", 73: "🌨️", 75: "🌨️", 77: "🌨️",
-    80: "🌧️", 81: "🌧️", 82: "🌧️", 85: "🌨️", 86: "🌨️",
-    95: "⛈️", 96: "⛈️", 99: "⛈️",
+    # 晴
+    "100": "☀️", "150": "🌙",
+    # 多云 / 少云 / 晴间多云
+    "101": "🌤️", "102": "⛅", "103": "🌤️",
+    "151": "🌙", "152": "🌙", "153": "🌙",
+    # 阴
+    "104": "☁️",
+    # 雨
+    "300": "🌦️", "301": "🌧️", "302": "⛈️", "303": "⛈️", "304": "⛈️",
+    "305": "🌦️", "306": "🌧️", "307": "🌧️", "308": "🌧️", "309": "🌦️",
+    "310": "🌧️", "311": "🌧️", "312": "🌧️", "313": "🌧️",
+    "314": "🌦️", "315": "🌧️", "316": "🌧️", "317": "🌧️", "318": "🌧️",
+    "350": "🌦️", "351": "🌧️", "399": "🌧️",
+    # 雪
+    "400": "🌨️", "401": "🌨️", "402": "🌨️", "403": "🌨️",
+    "404": "🌧️", "405": "🌨️", "406": "🌧️", "407": "🌨️",
+    "408": "🌨️", "409": "🌨️", "410": "🌨️",
+    "456": "🌧️", "457": "🌨️", "499": "🌨️",
+    # 雾 / 霾
+    "500": "🌫️", "501": "🌫️", "502": "🌫️", "503": "🌫️", "504": "🌫️",
+    "507": "🌫️", "508": "🌫️", "509": "🌫️", "510": "🌫️",
+    "511": "🌫️", "512": "🌫️", "513": "🌫️", "514": "🌫️", "515": "🌫️",
+    "900": "🌡️", "901": "🌡️",
 }
 
 
 async def fetch_weather():
-    url = "https://api.open-meteo.com/v1/forecast"
+    url = "https://devapi.qweather.com/v7/weather/now"
     params = {
-        "latitude": LAT,
-        "longitude": LON,
-        "current": "temperature_2m,weather_code",
-        "timezone": "Asia/Shanghai",
+        "location": f"{LON},{LAT}",
+        "key": QWEATHER_KEY,
     }
     async with aiohttp.ClientSession() as session:
         async with session.get(
             url, params=params, timeout=aiohttp.ClientTimeout(total=15)
         ) as r:
             data = await r.json()
-    temp = round(data["current"]["temperature_2m"])
-    code = data["current"]["weather_code"]
-    return WEATHER_EMOJI.get(code, "🌡️"), temp
+    now = data["now"]
+    temp = round(float(now["temp"]))
+    return WEATHER_EMOJI.get(now["icon"], "🌡️"), temp
 
 
 def build_client() -> TelegramClient:
