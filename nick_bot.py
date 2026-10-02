@@ -168,8 +168,8 @@ async def main():
         aligned = now.replace(second=0, microsecond=0)
         time_str = stylize(aligned.strftime("%H:%M"))
 
-        # 天气在每小时 :00/:10/:20/:30/:40/:50 对齐刷新（每 10 分钟；防同分钟重复）
-        if now.minute % 10 == 0 and time.time() - last_weather >= WEATHER_REFRESH_SECONDS - 60:
+        # 天气在每小时 :00/:10/:20/:30/:40/:50 对齐刷新（每 10 分钟；60 秒防同分钟重复）
+        if now.minute % 10 == 0 and time.time() - last_weather >= 60:
             try:
                 emoji, temp = await fetch_weather()
                 last_weather = time.time()
