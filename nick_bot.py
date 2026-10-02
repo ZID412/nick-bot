@@ -86,11 +86,11 @@ WEATHER_EMOJI = {
     "404": "🌧️", "405": "🌨️", "406": "🌧️", "407": "🌨️",
     "408": "🌨️", "409": "🌨️", "410": "🌨️",
     "456": "🌧️", "457": "🌨️", "499": "🌨️",
-    # 雾 / 霾
-    "500": "🌫️", "501": "🌫️", "502": "🌫️", "503": "🌫️", "504": "🌫️",
-    "507": "🌫️", "508": "🌫️", "509": "🌫️", "510": "🌫️",
-    "511": "🌫️", "512": "🌫️", "513": "🌫️", "514": "🌫️", "515": "🌫️",
-    "900": "🌡️", "901": "🌡️",
+    # 雾 / 霾 / 沙尘 / 热 / 冷 → 统一阴
+    "500": "☁️", "501": "☁️", "502": "☁️", "503": "☁️", "504": "☁️",
+    "507": "☁️", "508": "☁️", "509": "☁️", "510": "☁️",
+    "511": "☁️", "512": "☁️", "513": "☁️", "514": "☁️", "515": "☁️",
+    "900": "☁️", "901": "☁️",
 }
 
 
@@ -107,7 +107,7 @@ async def fetch_weather():
             data = await r.json()
     now = data["now"]
     temp = round(float(now["temp"]))
-    return WEATHER_EMOJI.get(now["icon"], "🌡️"), temp
+    return WEATHER_EMOJI.get(now["icon"], "☁️"), temp
 
 
 def build_client() -> TelegramClient:
@@ -168,8 +168,8 @@ async def main():
         aligned = now.replace(second=0, microsecond=0)
         time_str = stylize(aligned.strftime("%H:%M"))
 
-        # 每 2 小时刷新天气（失败则沿用缓存）
-        if time.time() - last_weather > WEATHER_REFRESH_SECONDS:
+        # 天气在每小时 :00 和 :30 对齐刷新（每半小时；距上次至少 25 分钟防重复）
+        if now.minute in (0, 30) and time.time() - last_weather > WEATHER_REFRESH_SECONDS - 300:
             try:
                 emoji, temp = await fetch_weather()
                 last_weather = time.time()
