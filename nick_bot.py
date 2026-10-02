@@ -27,7 +27,7 @@ API_HASH = os.environ["API_HASH"]
 PHONE = os.environ["PHONE"]
 PREFIX = os.environ.get("PREFIX", "ZIDDDD.")
 REFRESH_SECONDS = int(os.environ.get("REFRESH_SECONDS", "30"))
-WEATHER_REFRESH_SECONDS = float(os.environ.get("WEATHER_REFRESH_HOURS", "2")) * 3600
+WEATHER_REFRESH_SECONDS = 600  # 天气每 10 分钟刷新一次（:00/:10/:20/:30/:40/:50）
 LAT = float(os.environ.get("LAT", "22.27"))    # 珠海
 LON = float(os.environ.get("LON", "113.58"))
 TZ = ZoneInfo(os.environ.get("TIMEZONE", "Asia/Shanghai"))
@@ -168,8 +168,8 @@ async def main():
         aligned = now.replace(second=0, microsecond=0)
         time_str = stylize(aligned.strftime("%H:%M"))
 
-        # 天气在每小时 :00 和 :30 对齐刷新（每半小时；距上次至少 25 分钟防重复）
-        if now.minute in (0, 30) and time.time() - last_weather > WEATHER_REFRESH_SECONDS - 300:
+        # 天气在每小时 :00/:10/:20/:30/:40/:50 对齐刷新（每 10 分钟；防同分钟重复）
+        if now.minute % 10 == 0 and time.time() - last_weather >= WEATHER_REFRESH_SECONDS - 60:
             try:
                 emoji, temp = await fetch_weather()
                 last_weather = time.time()
