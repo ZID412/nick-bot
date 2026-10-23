@@ -1,9 +1,8 @@
 ﻿"""
 Telegram 昵称实时时间 + 天气 userbot
 
-昵称格式: ZIDDDD. 13:00:00 ☀️30℃  （字母自动转粗斜体、数字自动转粗体无衬线）
-- 时间每 30 秒刷新一次昵称
-- 天气与温度每 2 小时刷新一次（Open-Meteo，免费无需 key）
+- 只更新姓氏框(last_name)：HH:MM（双线空心数字）+ 天气 emoji + 温度（双线空心数字）°𝙲，名字框不改动
+- 时间每分钟刷新一次；天气与温度每 10 分钟对齐 :00/:10/:20/:30/:40/:50 拉取（和风天气 QWeather）
 - 用自己的 Telegram 账号登录（MTProto / Telethon）
 """
 import asyncio
@@ -117,7 +116,7 @@ def build_client() -> TelegramClient:
         u = urlparse(PROXY_URL)
         scheme = "socks5" if u.scheme.startswith("socks") else "http"
         kwargs["proxy"] = (scheme, u.hostname, u.port)
-    # Zeabur 部署用环境变量 SESSION_STRING；本地用 my_account.session 文件
+    # Railway 部署用环境变量 SESSION_STRING；本地用 my_account.session 文件
     session_str = os.environ.get("SESSION_STRING", "").strip()
     if session_str:
         from telethon.sessions import StringSession
@@ -141,7 +140,7 @@ async def main():
     client = build_client()
     await client.start(phone=PHONE)
 
-    # Zeabur 保活用：存在 PORT 环境变量时起一个健康检查 HTTP 服务
+    # 健康检查：存在 PORT 环境变量时起一个 HTTP 保活服务
     port_env = os.environ.get("PORT")
     if port_env:
         from aiohttp import web

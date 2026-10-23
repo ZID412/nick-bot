@@ -3,6 +3,13 @@
 my_account.session
 my_account.session-journal
 code_hash.txt
+new_session.txt
+*.session.old-*.bak
+
+# 本地校验/临时预览
+railway_env_preview.txt
+verify_env.py
+verify_result.json
 
 # Python
 __pycache__/
