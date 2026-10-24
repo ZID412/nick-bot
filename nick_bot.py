@@ -112,6 +112,44 @@ async def fetch_weather():
     return WEATHER_EMOJI.get(now["icon"], "☁️"), temp
 
 
+# ---------- 天文边界（民用蒙影：civilDawn ≤ 现在 < civilDusk 为白天） ----------
+# 一天只变一次：启动与跨天时拉取，按本地日期缓存；拉取失败回退固定时段
+astro_cache = {"date": None, "dawn": None, "dusk": None}
+
+
+def _parse_astro_time(ts: str) -> datetime:
+    """v1 astro 为 UTC ISO（Z 结尾），解析后转本地时区，返回 aware datetime"""
+    return datetime.fromisoformat(ts.replace("Z", "+00:00")).astimezone(TZ)
+
+
+async def fetch_civil_twilight():
+    """拉取当天 civilDawn（民用晨光开始）/ civilDusk（民用昏影结束），返回本地 aware (dawn, dusk)"""
+    url = f"https://{QWEATHER_HOST}/weather/v1/daily/{LAT}/{LON}"
+    params = {"days": "1", "key": QWEATHER_KEY}
+    async with aiohttp.ClientSession() as session:
+        async with session.get(
+            url, params=params, timeout=aiohttp.ClientTimeout(total=15)
+        ) as r:
+            data = await r.json()
+    astro = data["days"][0]["astro"]
+    dawn = _parse_astro_time(astro["civilDawn"])
+    dusk = _parse_astro_time(astro["civilDusk"])
+    return dawn, dusk
+
+
+async def ensure_astro(now: datetime) -> None:
+    """当天已有缓存则跳过不发请求；首次或跨天拉取当天边界；失败清空缓存回退固定时段"""
+    if astro_cache["date"] == now.date():
+        return
+    try:
+        dawn, dusk = await fetch_civil_twilight()
+        astro_cache.update(date=now.date(), dawn=dawn, dusk=dusk)
+        print(f"[天文边界] 今日 {dawn.strftime('%H:%M')} – {dusk.strftime('%H:%M')}")
+    except Exception as e:
+        astro_cache.update(date=None, dawn=None, dusk=None)
+        print(f"[天文边界拉取失败，回退固定时段] {e}")
+
+
 def build_client() -> TelegramClient:
     kwargs = {}
     if PROXY_URL:
@@ -128,9 +166,14 @@ def build_client() -> TelegramClient:
 
 
 def day_or_night_emoji(emoji: str) -> str:
-    """晚上（19:00-06:00）：晴换月亮，多云/少云转阴云"""
-    hour = datetime.now(TZ).hour
-    if hour >= 6 and hour < 19:
+    """夜间：晴换月亮，多云/少云转阴云；白天表情原样"""
+    now = datetime.now(TZ)
+    if astro_cache["dawn"] and astro_cache["dusk"]:
+        is_day = astro_cache["dawn"] <= now < astro_cache["dusk"]
+    else:
+        # 天文边界缺失/拉取失败：回退固定时段 06:00–18:59
+        is_day = 6 <= now.hour < 19
+    if is_day:
         return emoji
     return {
         "☀️": "🌙",
@@ -163,9 +206,11 @@ async def main():
     emoji, temp = await fetch_weather()
     last_weather = time.time()
     print(f"[启动] 当前天气: {emoji} {temp}°C")
+    await ensure_astro(datetime.now(TZ))
 
     while True:
         now = datetime.now(TZ)
+        await ensure_astro(now)
         # 对齐到分钟边界，只显示 HH:MM
         aligned = now.replace(second=0, microsecond=0)
         time_str = stylize(aligned.strftime("%H:%M"))
