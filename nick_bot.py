@@ -8,7 +8,7 @@ Telegram 昵称实时时间 + 天气 userbot
 import asyncio
 import os
 import time
-from datetime import datetime
+from datetime import datetime, timedelta
 from urllib.parse import urlparse
 from zoneinfo import ZoneInfo
 
@@ -113,8 +113,25 @@ async def fetch_weather():
 
 
 # ---------- 天文边界（民用蒙影：civilDawn ≤ 现在 < civilDusk 为白天） ----------
-# 一天只变一次：启动与跨天时拉取，按本地日期缓存；拉取失败回退固定时段
-astro_cache = {"date": None, "dawn": None, "dusk": None}
+# 启动/跨天拉取当天边界并按本地日期缓存；失败先在短窗口内重试，连续失败 6 次后转整点节流
+SHORT_WINDOW_MINUTES = 5   # 首次失败后的短窗口长度（分钟）
+MAX_SHORT_ATTEMPTS = 6     # 短窗口内最多尝试次数（首轮 + 5 分钟内 5 次）
+astro_cache = {
+    "date": None, "dawn": None, "dusk": None,
+    "fail_count": 0, "first_fail_at": None, "next_retry": None,
+}
+
+
+def _next_hour(now: datetime) -> datetime:
+    """返回下一整点时刻（本地 aware），作为整点节流的下次允许重试时间"""
+    return now.replace(minute=0, second=0, microsecond=0) + timedelta(hours=1)
+
+
+def _reset_failure_state() -> None:
+    """清空失败计数与退避时刻，保留日期与边界由调用方处理"""
+    astro_cache["fail_count"] = 0
+    astro_cache["first_fail_at"] = None
+    astro_cache["next_retry"] = None
 
 
 def _parse_astro_time(ts: str) -> datetime:
@@ -138,16 +155,54 @@ async def fetch_civil_twilight():
 
 
 async def ensure_astro(now: datetime) -> None:
-    """当天已有缓存则跳过不发请求；首次或跨天拉取当天边界；失败清空缓存回退固定时段"""
+    """当天缓存命中直接返回；启动/跨天拉取边界；失败先短窗口重试，6 次失败后整点节流"""
+    # 当天已有缓存：不发请求
     if astro_cache["date"] == now.date():
         return
+    # 跨天：清理昨天遗留的失败计数与节流时刻，新一天重新进入短窗口
+    if astro_cache["first_fail_at"] and astro_cache["first_fail_at"].date() != now.date():
+        _reset_failure_state()
+    # 整点节流期：未到下次允许时刻直接跳过
+    if astro_cache["fail_count"] >= MAX_SHORT_ATTEMPTS:
+        if astro_cache["next_retry"] and now < astro_cache["next_retry"]:
+            return
+    # 短窗口已过但计数未满 6（循环延迟兜底）：直接转入整点节流
+    elif astro_cache["fail_count"] > 0:
+        if now - astro_cache["first_fail_at"] > timedelta(minutes=SHORT_WINDOW_MINUTES):
+            astro_cache["fail_count"] = MAX_SHORT_ATTEMPTS
+            astro_cache["next_retry"] = _next_hour(now)
+            return
+
     try:
         dawn, dusk = await fetch_civil_twilight()
         astro_cache.update(date=now.date(), dawn=dawn, dusk=dusk)
+        _reset_failure_state()
         print(f"[天文边界] 今日 {dawn.strftime('%H:%M')} – {dusk.strftime('%H:%M')}")
     except Exception as e:
-        astro_cache.update(date=None, dawn=None, dusk=None)
-        print(f"[天文边界拉取失败，回退固定时段] {e}")
+        # 边界清空：day_or_night_emoji 回退固定时段 06:00–18:59
+        astro_cache["date"] = None
+        astro_cache["dawn"] = None
+        astro_cache["dusk"] = None
+        was_throttled = astro_cache["fail_count"] >= MAX_SHORT_ATTEMPTS
+        if astro_cache["fail_count"] == 0:
+            astro_cache["first_fail_at"] = now
+        astro_cache["fail_count"] += 1
+        astro_cache["next_retry"] = _next_hour(now)
+        if was_throttled:
+            print(
+                f"[天文边界整点重试失败，下次 "
+                f"{astro_cache['next_retry'].strftime('%H:00')}] {e}"
+            )
+        elif astro_cache["fail_count"] >= MAX_SHORT_ATTEMPTS:
+            print(
+                f"[天文边界连续失败 {MAX_SHORT_ATTEMPTS} 次，转整点节流，"
+                f"下次重试 {astro_cache['next_retry'].strftime('%H:00')}] {e}"
+            )
+        else:
+            print(
+                f"[天文边界拉取失败，第 {astro_cache['fail_count']}/"
+                f"{MAX_SHORT_ATTEMPTS} 次，短窗口内重试] {e}"
+            )
 
 
 def build_client() -> TelegramClient:
