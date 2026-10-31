@@ -221,7 +221,7 @@ def build_client() -> TelegramClient:
 
 
 def day_or_night_emoji(emoji: str) -> str:
-    """夜间：晴换月亮，多云/少云转阴云；白天表情原样"""
+    """夜间：晴换月亮，多云/少云/晴间多云保持原样；白天表情原样"""
     now = datetime.now(TZ)
     if astro_cache["dawn"] and astro_cache["dusk"]:
         is_day = astro_cache["dawn"] <= now < astro_cache["dusk"]
@@ -232,8 +232,6 @@ def day_or_night_emoji(emoji: str) -> str:
         return emoji
     return {
         "☀️": "🌙",
-        "🌤️": "☁️",
-        "⛅": "☁️",
     }.get(emoji, emoji)
 
 
